@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>職游旅人：公關顧問職能探索</title>
+    <style>
+        :root {
+            --primary-color: #34495e;
+            --accent-color: #ff9f43;
+            --bg-color: #fdfaf7;
+            --text-color: #5d5d5d;
+        }
+
+        body {
+            font-family: "PingFang TC", "Noto Sans TC", sans-serif;
+            background-color: var(--bg-color);
+            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        #app-container {
+            width: 95%; max-width: 650px; background: #fff; padding: 30px;
+            border-radius: 28px; box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+            margin: 20px;
+        }
+
+        .screen { display: none; text-align: center; animation: fadeIn 0.5s; }
+        .active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        h1, h2 { color: var(--primary-color); margin-bottom: 20px; }
+        .question-text { font-size: 1.3rem; font-weight: 600; min-height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; line-height: 1.6; padding: 0 10px; }
+        
+        .btn-list { display: flex; flex-direction: column; gap: 12px; }
+        .btn {
+            padding: 16px; border: 2px solid #eee; border-radius: 16px;
+            background: #fff; cursor: pointer; font-size: 1rem; transition: 0.2s; color: var(--text-color);
+        }
+        .btn:hover { border-color: var(--accent-color); background: #fffaf5; color: var(--accent-color); }
+        .btn-next { background: var(--primary-color); color: white; border: none; padding: 16px 40px; border-radius: 50px; margin-top: 25px; width: 100%; font-size: 1.1rem; cursor: pointer; }
+
+        canvas { max-width: 100%; height: auto; margin: 10px 0; }
+        .analysis-box { background: #fdfdfd; padding: 25px; border-radius: 20px; text-align: left; margin-top: 15px; line-height: 1.8; border: 1px solid #f0f0f0; }
+        
+        .role-title { font-size: 1.6rem; font-weight: bold; color: var(--accent-color); margin-top: 10px; }
+        .star-label { font-size: 0.9rem; color: #888; margin-top: 10px; }
+        .star-rating { font-size: 1.2rem; color: #f1c40f; margin-bottom: 15px; }
+        
+        .section-title { font-weight: bold; color: var(--primary-color); margin-top: 15px; display: block; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- 1. 歡迎 -->
+    <div id="welcome-screen" class="screen active">
+        <h1 style="color: var(--accent-color);">公關顧問職能探索</h1>
+        <p style="line-height: 1.8; color: #777;">每一顆星辰都有它閃耀的角度。<br>這趟旅程將透過「職游六型」帶你發現，<br>你在公關舞台上，會扮演哪一個充滿魅力的角色？</p>
+        <button class="btn-next" onclick="nextScreen('quiz-screen')">開始旅程</button>
+    </div>
+
+    <!-- 2. 測驗 -->
+    <div id="quiz-screen" class="screen">
+        <div id="progress" style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;"></div>
+        <div id="q-text" class="question-text"></div>
+        <div class="btn-list">
+            <button class="btn" onclick="handleAnswer(3)">這就是我</button>
+            <button class="btn" onclick="handleAnswer(2)">多數時候是</button>
+            <button class="btn" onclick="handleAnswer(1)">偶爾是這樣</button>
+            <button class="btn" onclick="handleAnswer(0)">不是我</button>
+        </div>
+    </div>
+
+    <!-- 3. 六型結果 -->
+    <div id="result-screen" class="screen">
+        <h2>你的核心能量圖</h2>
+        <canvas id="personalRadar" width="400" height="400"></canvas>
+        <div id="personal-desc" class="analysis-box"></div>
+        <button class="btn-next" onclick="showComparison()">查看我的公關專屬角色</button>
+    </div>
+
+    <!-- 4. 公關比對 -->
+    <div id="compare-screen" class="screen">
+        <h2>公關顧問適配探索</h2>
+        <div class="analysis-box" style="text-align: center;">
+            <div id="res-role-title" class="role-title"></div>
+            <div class="star-label">公關顧問適配度</div>
+            <div id="res-star-rating" class="star-rating"></div>
+            <div id="res-compare-text" style="text-align: left;"></div>
+        </div>
+        <button class="btn" style="margin-top: 25px; width: 100%; border-radius: 50px;" onclick="location.reload()">重新探索</button>
+    </div>
+</div>
+
+<script>
+    const typeMeta = {
+        R: { name: "R 實踐者", color: "#e74c3c" },
+        I: { name: "I 思考者", color: "#3498db" },
+        A: { name: "A 創造者", color: "#9b59b6" },
+        S: { name: "S 助人者", color: "#2ecc71" },
+        E: { name: "E 影響者", color: "#f1c40f" },
+        C: { name: "C 組織者", color: "#95a5a6" }
+    };
+
+    const questions = [
+        { q: "我喜歡親手修復壞掉的物品，享受讓它重獲新生的過程。", t: "R" },
+        { q: "遇到不懂的新知識，我會主動找資料鑽研其中的邏輯與原理。", t: "I" },
+        { q: "我喜歡用獨特的方式（如攝影、文字）來表達內心的感受。", t: "A" },
+        { q: "我樂於擔任團隊中的「便利貼」，主動關心並協助他人。", t: "S" },
+        { q: "我享受說服他人接受我的看法，並帶領大家朝目標前進。", t: "E" },
+        { q: "看到混亂的文件或數據被我整理得井然有序，心裡會很療癒。", t: "C" },
+        { q: "我追求生活中的美感，喜歡構思吸睛的活動創意。", t: "A" },
+        { q: "我能輕易察覺別人的情緒變化，並給予溫暖的支持。", t: "S" },
+        { q: "我擅長在會議中主導討論，促成各方連結與合作。", t: "E" },
+        { q: "我非常注重細節，喜歡在變動中建立穩定的流程。", t: "C" },
+        { q: "我喜歡親手操作工具或設備，這讓我感到踏實。", t: "R" },
+        { q: "面對複雜的問題，我傾向先冷靜觀察並收集數據再行動。", t: "I" }
+    ];
+
+    let currentStep = 0;
+    let scores = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
+
+    function nextScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'quiz-screen') showQuestion();
+    }
+
+    function showQuestion() {
+        if (currentStep < questions.length) {
+            document.getElementById('q-text').innerText = questions[currentStep].q;
+            document.getElementById('progress').innerText = `探索進度 ${currentStep + 1} / ${questions.length}`;
+        } else {
+            showPersonalResult();
+        }
+    }
+
+    function handleAnswer(val) {
+        scores[questions[currentStep].t] += val;
+        currentStep++;
+        showQuestion();
+    }
+
+    function showPersonalResult() {
+        nextScreen('result-screen');
+        const sorted = Object.keys(scores).sort((a,b) => scores[b]-scores[a]);
+        document.getElementById('personal-desc').innerHTML = `你的前兩大核心能量是 <strong>${typeMeta[sorted[0]].name}</strong> 與 <strong>${typeMeta[sorted[1]].name}</strong>。<br>這代表你在面對挑戰時，習慣運用這兩種能量來創造成果。`;
+        drawPersonalRadar("personalRadar", scores);
+    }
+
+    function showComparison() {
+        nextScreen('compare-screen');
+        const prModel = { R: 3, I: 5, A: 8, S: 7, E: 9, C: 6 };
+        let diff = 0;
+        Object.keys(prModel).forEach(k => {
+            diff += Math.abs((scores[k] / 6) - (prModel[k] / 9));
+        });
+        const matchPercent = Math.max(0, (1 - (diff / 6)));
+
+        let res = {};
+        if(matchPercent > 0.8) {
+            res = {
+                title: "辯論場上的王牌律師",
+                stars: 5,
+                advice: `
+                    <span class="section-title">公關專屬能量</span> 你天生擁有強大的氣場與邏輯穿透力，能精準洞察利益關係人的需求。在公關顧問領域，你是極具攻擊力的「議題操盤手」，善於透過強而有力的論點說服媒體與大眾，將複雜的品牌困境轉化為優勢。
+                    <span class="section-title">生活小特長</span> 朋友圈裡的意見領袖，大家在猶豫抉擇時總會被你的專業分析給說服，你擅長在混亂的討論中一針見血地指出關鍵點。
+                    <span class="section-title">職涯延伸建議</span> 在公關傳播領域，你非常適合擔任「危機處理專家」、「發言人」或「議題策略顧問」。若往跨領域發展，則適合「商務開發（BD）」、「政府關係（GR）」或「高端法律合約談判」。建議多鍛鍊商業談判技巧，讓你的影響力更具策略厚度。
+                `
+            };
+        } else if(matchPercent > 0.6) {
+            res = {
+                title: "追求極致的法式主廚",
+                stars: 4,
+                advice: `
+                    <span class="section-title">公關專屬能量</span> 你擅長將生硬的資訊重新拆解，像擺盤精緻的佳餚一樣重新呈現給受眾。你對美感與細節的追求，使你成為公關團隊中的「質感守護者」，能細細烹調品牌故事，創造出令人意猶未盡的情感連結。
+                    <span class="section-title">生活小特長</span> 擅長營造生活中的儀式感，對品味有獨到見解，可能是穿搭高手或空間布置專家，朋友圈裡最有質感的資訊都來自你。
+                    <span class="section-title">職涯延伸建議</span> 在公關傳播領域，你適合「品牌公關（Branding）」、「視覺公關策略」或「內容策展人」。跨領域方面，則推薦「品牌創意指導」、「廣告文案策劃」或「精品採購」。建議多接觸跨媒介的視覺藝術，這能讓你的創意表達更具穿透力。
+                `
+            };
+        } else if(matchPercent > 0.4) {
+            res = {
+                title: "擅長反轉劇情的金牌導演",
+                stars: 3,
+                advice: `
+                    <span class="section-title">公關專屬能量</span> 你擁有一雙冷靜的觀察眼與宏觀的視角。在公關工作中，你就像是坐在監視器後的導演，能精準捕捉群眾的心理變化，並預判潛在風險。你擅長調度資源，在變動的環境中尋找最佳的拍攝角度，讓品牌形象平穩落地。
+                    <span class="section-title">生活小特長</span> 最強大的「避雷專家」，買東西前會翻遍評價、旅行前會做足功課，大家只要跟著你的建議走，絕對能避開所有的坑。
+                    <span class="section-title">職涯延伸建議</span> 在公關傳播領域，你適合「媒體監測與分析」、「輿情應變策略」或「公關專案經理」。跨領域則推薦「專案經理（PM）」、「使用者經驗研究（UXR）」或「市場情報分析」。建議強化數位行銷工具的解讀能力，讓你的洞察能轉換為精準的行動方針。
+                `
+            };
+        } else {
+            res = {
+                title: "掌控全場的電視節目製作人",
+                stars: 2,
+                advice: `
+                    <span class="section-title">公關專屬能量</span> 你是所有公關大秀中最穩定的核心力量。雖然不一定愛站在鏡頭前，但你強大的整合力與執行穩定性，確保了從場地控管、流程運行到人員調度都能零失誤。你是公關活動中讓客戶最安心的「現場總指揮」。
+                    <span class="section-title">生活小特長</span> 朋友圈中最可靠的行動派與導航官，聚餐訂位、旅遊攻略由你經手絕對萬無一失，你是大家心目中最具安全感的存在。
+                    <span class="section-title">職涯延伸建議</span> 在公關傳播領域，你適合「大型公關活動執行」、「異業合作執行」或「媒體關係維護」。跨領域則推薦「大型活動營運」、「供應鏈管理」或「企業營運管理（COO助理）」。建議可以嘗試學習更高階的資源分配策略，讓執行力升級為決策力。
+                `
+            };
+        }
+        
+        document.getElementById('res-role-title').innerText = res.title;
+        document.getElementById('res-star-rating').innerText = "★".repeat(res.stars) + "☆".repeat(5-res.stars);
+        document.getElementById('res-compare-text').innerHTML = res.advice;
+    }
+
+    function drawPersonalRadar(canvasId, userScores) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext("2d");
+        const centerX = 200, centerY = 200, radius = 130;
+        const keys = ["R", "I", "A", "S", "E", "C"];
+
+        ctx.clearRect(0, 0, 400, 400);
+
+        // 背景網格
+        ctx.strokeStyle = "#eee"; ctx.lineWidth = 1;
+        for (let j = 1; j <= 5; j++) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                let angle = (i * 2 * Math.PI) / 6 - Math.PI / 2;
+                let r = (radius / 5) * j;
+                ctx.lineTo(centerX + r * Math.cos(angle), centerY + r * Math.sin(angle));
+            }
+            ctx.closePath(); ctx.stroke();
+        }
+
+        // 標籤 (完整名稱)
+        ctx.font = "bold 13px sans-serif";
+        keys.forEach((k, i) => {
+            let angle = (i * 2 * Math.PI) / 6 - Math.PI / 2;
+            let x = centerX + (radius + 35) * Math.cos(angle);
+            let y = centerY + (radius + 35) * Math.sin(angle);
+            ctx.fillStyle = typeMeta[k].color;
+            ctx.textAlign = "center";
+            ctx.fillText(typeMeta[k].name, x, y);
+        });
+
+        // 繪製使用者能量區
+        ctx.beginPath();
+        keys.forEach((k, i) => {
+            let angle = (i * 2 * Math.PI) / 6 - Math.PI / 2;
+            let val = Math.max(userScores[k], 0.5);
+            let r = (radius / 6) * val;
+            if (i === 0) ctx.moveTo(centerX + r * Math.cos(angle), centerY + r * Math.sin(angle));
+            else ctx.lineTo(centerX + r * Math.cos(angle), centerY + r * Math.sin(angle));
+        });
+        ctx.closePath();
+        ctx.fillStyle = "rgba(255, 159, 67, 0.5)"; ctx.fill();
+        ctx.strokeStyle = "#ff9f43"; ctx.lineWidth = 3; ctx.stroke();
+    }
+</script>
+</body>
+</html>
